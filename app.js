@@ -67,14 +67,34 @@ const App = {
        Event Listeners Setup
        ========================================== */
     setupEventListeners() {
-        // Sidebar Toggles
+        // Sidebar Toggles & Mobile Drawer Handling
         const sidebar = document.getElementById('sidebar');
-        document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-        });
-        document.getElementById('btn-mobile-menu')?.addEventListener('click', () => {
-            sidebar.classList.toggle('collapsed');
-        });
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        const toggleSidebarMobile = () => {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                    sidebarOverlay?.classList.remove('hidden');
+                } else {
+                    sidebarOverlay?.classList.add('hidden');
+                }
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        };
+
+        this.closeSidebarMobile = () => {
+            if (window.innerWidth <= 768) {
+                sidebar?.classList.remove('active');
+                sidebarOverlay?.classList.add('hidden');
+            }
+        };
+
+        document.getElementById('btn-toggle-sidebar')?.addEventListener('click', toggleSidebarMobile);
+        document.getElementById('btn-mobile-menu')?.addEventListener('click', toggleSidebarMobile);
+        sidebarOverlay?.addEventListener('click', () => this.closeSidebarMobile());
 
         // Search Toggle in Sidebar
         const searchBox = document.getElementById('search-box-container');
@@ -525,6 +545,7 @@ const App = {
         this.updatePersonaBadge();
         this.renderSidebar();
         this.renderActiveChat();
+        if (this.closeSidebarMobile) this.closeSidebarMobile();
     },
 
     selectChat(chatId) {
@@ -538,6 +559,7 @@ const App = {
         this.updatePersonaBadge();
         this.renderSidebar();
         this.renderActiveChat();
+        if (this.closeSidebarMobile) this.closeSidebarMobile();
     },
 
     getActiveChat() {

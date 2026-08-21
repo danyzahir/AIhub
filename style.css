@@ -1474,10 +1474,22 @@ p inline-code, code:not(pre code) {
     }
 }
 
-/* Responsive Styles for Mobile */
+/* Responsive Styles for Mobile & Tablet */
 @media (max-width: 768px) {
     .mobile-only {
-        display: inline-flex;
+        display: inline-flex !important;
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        z-index: 99;
+        transition: opacity 0.3s ease;
     }
 
     .sidebar {
@@ -1485,13 +1497,47 @@ p inline-code, code:not(pre code) {
         left: 0;
         top: 0;
         bottom: 0;
-        box-shadow: var(--shadow-lg);
-        transform: translateX(0);
+        width: 280px;
+        z-index: 100;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.6);
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-left: 0 !important;
+    }
+
+    .sidebar.active {
+        transform: translateX(0) !important;
     }
 
     .sidebar.collapsed {
-        transform: translateX(-100%);
-        margin-left: 0;
+        transform: translateX(-100%) !important;
+    }
+
+    .top-bar {
+        padding: 10px 14px;
+        gap: 8px;
+    }
+
+    .top-bar-left {
+        gap: 8px;
+    }
+
+    .model-selector-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    .pill-toggle-btn span {
+        display: none;
+    }
+
+    .input-area {
+        padding: 10px 12px 14px 12px;
+    }
+
+    .welcome-heading {
+        font-size: 22px;
+        margin-bottom: 24px;
     }
 
     .prompt-starters-grid {
@@ -1510,5 +1556,11 @@ p inline-code, code:not(pre code) {
         border-right: none;
         border-bottom: 1px solid var(--border-light);
         max-height: 150px;
+    }
+
+    .modal-card {
+        width: 94%;
+        max-height: 90vh;
+        padding: 16px;
     }
 }
