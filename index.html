@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hub</title>
+    <!-- Remove Browser Tab Favicon -->
+    <link rel="icon" href="data:,">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Highlight.js Theme (Atom One Dark) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <span class="brand-text">AI Hub <small class="brand-badge">Go</small></span>
+                </div>
+                <div class="sidebar-controls">
+                    <button id="btn-search-toggle" class="icon-btn" title="Cari Chat">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                    <button id="btn-toggle-sidebar" class="icon-btn" title="Tutup Sidebar">
+                        <i class="fa-solid fa-sidebar"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- New Chat Button -->
+            <button id="btn-new-chat" class="new-chat-btn">
+                <i class="fa-solid fa-plus"></i>
+                <span>Obrolan baru</span>
+            </button>
+
+            <!-- Search Container (Collapsible) -->
+            <div class="sidebar-search-box hidden" id="search-box-container">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-chat-input" placeholder="Cari obrolan...">
+                <button id="btn-clear-search" class="clear-search-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Navigation Items -->
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item" id="nav-api-settings-btn">
+                    <i class="fa-solid fa-key"></i>
+                    <span>Setelan API & Model</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Pinned Custom GPTs -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <span>Disematkan</span>
+                    <button id="btn-add-custom-gpt" class="small-add-btn" title="Buat Custom GPT"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="pinned-list" id="pinned-gpts-list">
+                    <!-- Dynamic items added here -->
+                </div>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Recent Chat History -->
+            <div class="sidebar-section flex-grow">
+                <div class="section-title">Terkini</div>
+                <div class="recent-list" id="recent-chats-list">
+                    <!-- Dynamic chat items added via JS -->
+                </div>
+            </div>
+
+            <!-- Sidebar Footer User Profile -->
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn" title="Pengaturan Akun & Data">
+                    <div class="avatar">D</div>
+                    <div class="user-info">
+                        <span class="user-name">Danz</span>
+                        <span class="user-status">Go Mode</span>
+                    </div>
+                </div>
+                <button id="btn-quick-settings" class="icon-btn" title="Setelan Cepat">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Mobile Top Bar & Main Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button id="btn-mobile-menu" class="icon-btn mobile-only" title="Buka Sidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    
+                    <!-- Model Selector Dropdown -->
+                    <div class="model-dropdown-container">
+                        <button id="btn-model-selector" class="model-selector-btn">
+                            <span id="current-model-name">GPT-4o (OpenAI)</span>
+                            <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                        </button>
+                        <div class="model-dropdown-menu hidden" id="model-dropdown-menu">
+                            <div class="dropdown-header">Model DeepSeek Official</div>
+                            <button class="model-option" data-provider="deepseek" data-model="deepseek-chat">
+                                <i class="fa-solid fa-brain"></i>
+                                <div class="model-info">
+                                    <span class="model-title">DeepSeek V3</span>
+                                    <span class="model-desc">DeepSeek Official (deepseek-chat)</span>
+                                </div>
+                            </button>
+                            <button class="model-option" data-provider="deepseek" data-model="deepseek-reasoner">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <div class="model-info">
+                                    <span class="model-title">DeepSeek R1</span>
+                                    <span class="model-desc">Mode Penalaran/Thinking (deepseek-reasoner)</span>
+                                </div>
+                            </button>
+
+                            <div class="dropdown-header">Model OpenAI</div>
+                            <button class="model-option active" data-provider="openai" data-model="gpt-4o">
+                                <i class="fa-solid fa-bolt"></i>
+                                <div class="model-info">
+                                    <span class="model-title">GPT-4o</span>
+                                    <span class="model-desc">OpenAI flagship model terkuat</span>
+                                </div>
+                            </button>
+                            <button class="model-option" data-provider="openai" data-model="gpt-4o-mini">
+                                <i class="fa-solid fa-feather"></i>
+                                <div class="model-info">
+                                    <span class="model-title">GPT-4o-mini</span>
+                                    <span class="model-desc">Cepat & hemat token</span>
+                                </div>
+                            </button>
+
+                            <div class="dropdown-header">Model Google & Lainnya</div>
+                            <button class="model-option" data-provider="gemini" data-model="gemini-2.0-flash">
+                                <i class="fa-solid fa-gem"></i>
+                                <div class="model-info">
+                                    <span class="model-title">Gemini 2.0 Flash</span>
+                                    <span class="model-desc">Google AI super cepat & cerdas</span>
+                                </div>
+                            </button>
+                            <button class="model-option" data-provider="openrouter" data-model="deepseek/deepseek-chat">
+                                <i class="fa-solid fa-globe"></i>
+                                <div class="model-info">
+                                    <span class="model-title">OpenRouter (Multi-Model)</span>
+                                    <span class="model-desc">Claude 3.5, DeepSeek, Llama 3 via OpenRouter</span>
+                                </div>
+                            </button>
+                            <button class="model-option" data-provider="custom" data-model="custom-model">
+                                <i class="fa-solid fa-server"></i>
+                                <div class="model-info">
+                                    <span class="model-title">Custom Endpoint</span>
+                                    <span class="model-desc">Ollama / LocalAI / Server Kustom</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="top-bar-right">
+                    <!-- Reasoning / Thinking Mode Toggle Button -->
+                    <button id="btn-toggle-thinking" class="pill-toggle-btn" title="Aktifkan simulasi mode penalaran (Thinking Process)">
+                        <i class="fa-solid fa-brain"></i>
+                        <span>Berpikir</span>
+                    </button>
+                    
+                    <!-- Quick System Prompt Config -->
+                    <button id="btn-system-prompt-toggle" class="pill-toggle-btn" title="Atur System Prompt / Persona">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span id="active-persona-name">Default AI</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Scroll Area -->
+            <div class="chat-container" id="chat-container">
+                <!-- Welcome Screen (Shown when active chat is empty) -->
+                <div class="welcome-screen" id="welcome-screen">
+                    <h1 class="welcome-heading">Apa yang bisa saya bantu?</h1>
+                    
+                    <div class="prompt-starters-grid">
+                        <div class="prompt-card" data-prompt="Bantu saya membuat script PHP / Node.js yang bersih dan terstruktur untuk proyek web ini.">
+                            <div class="card-icon"><i class="fa-solid fa-code"></i></div>
+                            <div class="card-title">Koding & Web Dev</div>
+                            <div class="card-desc">Buat script PHP, JS, atau refactor kode</div>
+                        </div>
+                        <div class="prompt-card" data-prompt="Jelaskan metode Black Box Testing dan contoh skenario pengujian aplikasi secara mendalam.">
+                            <div class="card-icon"><i class="fa-solid fa-flask"></i></div>
+                            <div class="card-title">Penjelasan Konsep</div>
+                            <div class="card-desc">Pelajari topik teknis dengan mudah</div>
+                        </div>
+                        <div class="prompt-card" data-prompt="Buatkan 5 variasi prompt AI image generator style cyberpunk dark aesthetic dengan detail tinggi.">
+                            <div class="card-icon"><i class="fa-solid fa-palette"></i></div>
+                            <div class="card-title">Prompt Style Gambar</div>
+                            <div class="card-desc">Generator prompt gambar AI</div>
+                        </div>
+                        <div class="prompt-card" data-prompt="Bantu saya menyusun rencana arsitektur aplikasi web modern yang cepat dan efisien.">
+                            <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
+                            <div class="card-title">Desain Sistem</div>
+                            <div class="card-desc">Arsitektur database & REST API</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages List Container -->
+                <div class="messages-list hidden" id="messages-list">
+                    <!-- Dynamic Messages Output -->
+                </div>
+            </div>
+
+            <!-- Bottom Input Capsule Bar -->
+            <div class="input-area">
+                <!-- Floating Scroll to Bottom Button -->
+                <button id="btn-scroll-bottom" class="scroll-bottom-btn hidden" title="Lompat ke pesan terbaru">
+                    <i class="fa-solid fa-arrow-down"></i>
+                    <span>Lompat ke bawah</span>
+                </button>
+
+                <div class="input-capsule-wrapper">
+                    <div class="input-capsule">
+                        <button id="btn-attach" class="capsule-btn attach-btn" title="Lampirkan file / gambar">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <input type="file" id="file-input" class="hidden" accept="image/*,text/*,.pdf,.json,.js,.css,.html,.php">
+                        
+                        <textarea id="chat-input" placeholder="Tanyakan apa saja..." rows="1"></textarea>
+
+                        <div class="input-actions-right">
+                            <span id="input-thinking-tag" class="thinking-tag hidden">
+                                <i class="fa-solid fa-brain"></i> Berpikir
+                            </span>
+                            <button id="btn-send" class="capsule-btn send-btn disabled" title="Kirim pesan">
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="file-preview-bar hidden" id="file-preview-bar">
+                        <!-- Attached file pill display -->
+                    </div>
+                </div>
+                <p class="disclaimer-text">
+                    AI Hub dapat membuat kesalahan. Verifikasi API Key Anda di <a href="#" id="disclaimer-api-link">Setelan API</a>.
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL 1: API & Provider Settings -->
+    <div class="modal-overlay hidden" id="modal-api-settings">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-key title-icon"></i>
+                    <span>Pengaturan API & Model AI</span>
+                </div>
+                <button class="modal-close-btn" data-close-modal="modal-api-settings"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Provider Tabs -->
+                <div class="provider-tabs">
+                    <button class="tab-btn active" data-tab="tab-deepseek"><i class="fa-solid fa-brain"></i> DeepSeek</button>
+                    <button class="tab-btn" data-tab="tab-openai"><i class="fa-solid fa-bolt"></i> OpenAI</button>
+                    <button class="tab-btn" data-tab="tab-gemini"><i class="fa-solid fa-gem"></i> Google Gemini</button>
+                    <button class="tab-btn" data-tab="tab-openrouter"><i class="fa-solid fa-globe"></i> OpenRouter</button>
+                    <button class="tab-btn" data-tab="tab-custom"><i class="fa-solid fa-server"></i> Custom API</button>
+                </div>
+
+                <!-- Tab Content: DeepSeek Official -->
+                <div class="tab-content active" id="tab-deepseek">
+                    <div class="form-group">
+                        <label for="deepseek-api-key">DeepSeek API Key (Official)</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="deepseek-api-key" placeholder="sk-..." autocomplete="off">
+                            <button class="btn-toggle-eye" data-target="deepseek-api-key"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <small class="help-text">Dapatkan API Key di <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek Platform</a>.</small>
+                    </div>
+                </div>
+
+                <!-- Tab Content: OpenAI -->
+                <div class="tab-content" id="tab-openai">
+                    <div class="form-group">
+                        <label for="openai-api-key">OpenAI API Key</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="openai-api-key" placeholder="sk-proj-..." autocomplete="off">
+                            <button class="btn-toggle-eye" data-target="openai-api-key"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <small class="help-text">Dapatkan API Key di <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>.</small>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Gemini -->
+                <div class="tab-content" id="tab-gemini">
+                    <div class="form-group">
+                        <label for="gemini-api-key">Google Gemini API Key</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="gemini-api-key" placeholder="AIzaSy..." autocomplete="off">
+                            <button class="btn-toggle-eye" data-target="gemini-api-key"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <small class="help-text">Dapatkan API Key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</small>
+                    </div>
+                </div>
+
+                <!-- Tab Content: OpenRouter -->
+                <div class="tab-content" id="tab-openrouter">
+                    <div class="form-group">
+                        <label for="openrouter-api-key">OpenRouter API Key</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="openrouter-api-key" placeholder="sk-or-v1-..." autocomplete="off">
+                            <button class="btn-toggle-eye" data-target="openrouter-api-key"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <small class="help-text">Akses Claude, DeepSeek, Llama 3 via <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a>.</small>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Custom / Local -->
+                <div class="tab-content" id="tab-custom">
+                    <div class="form-group">
+                        <label for="custom-base-url">Custom Base URL Endpoint</label>
+                        <input type="text" id="custom-base-url" placeholder="http://localhost:11434/v1">
+                        <small class="help-text">Contoh: Ollama, vLLM, LM Studio, atau LocalAI endpoint.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="custom-model-id">Custom Model ID</label>
+                        <input type="text" id="custom-model-id" placeholder="llama3:latest atau deepseek-r1">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom-api-key">Custom API Key (Jika Diperlukan)</label>
+                        <input type="password" id="custom-api-key" placeholder="Opsional">
+                    </div>
+                </div>
+
+                <hr class="modal-divider">
+
+                <!-- Global Model Parameters -->
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="setting-temperature">Temperature (Kreativitas): <span id="val-temperature">0.7</span></label>
+                        <input type="range" id="setting-temperature" min="0" max="2" step="0.1" value="0.7">
+                    </div>
+                    <div class="form-group half">
+                        <label for="setting-max-tokens">Max Response Tokens</label>
+                        <input type="number" id="setting-max-tokens" min="256" max="16384" step="256" value="4096">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="setting-system-prompt">Default System Prompt (Instruksi Utama)</label>
+                    <textarea id="setting-system-prompt" rows="3" placeholder="Kamu adalah asisten AI profesional. Berikan jawaban yang terstruktur sangat rapi, elegan, dan mudah dibaca dalam Bahasa Indonesia. Gunakan heading (# / ##), poin-poin singkat (bullet points), serta tabel Markdown yang rapi jika menjelaskan perbandingan atau data ringkasan."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-reset-api-settings" class="secondary-btn">Reset Bawaan</button>
+                <button id="btn-save-api-settings" class="primary-btn"><i class="fa-solid fa-floppy-disk"></i> Simpan Setelan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Custom GPT & Persona Manager -->
+    <div class="modal-overlay hidden" id="modal-custom-gpt">
+        <div class="modal-card wide">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-shapes title-icon"></i>
+                    <span>Pustaka Custom GPT & Persona AI</span>
+                </div>
+                <button class="modal-close-btn" data-close-modal="modal-custom-gpt"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body custom-gpt-body">
+                <!-- Left: List of GPTs -->
+                <div class="gpt-list-pane">
+                    <div class="pane-header">
+                        <span>Daftar Asisten</span>
+                        <button id="btn-create-new-gpt" class="small-btn"><i class="fa-solid fa-plus"></i> Buat Baru</button>
+                    </div>
+                    <div class="gpt-items-container" id="gpt-items-container">
+                        <!-- Dynamic Custom GPT Cards -->
+                    </div>
+                </div>
+
+                <!-- Right: Edit / Create GPT Form -->
+                <div class="gpt-edit-pane">
+                    <h3 id="gpt-form-title">Buat Custom GPT Baru</h3>
+                    <input type="hidden" id="gpt-edit-id" value="">
+                    
+                    <div class="form-group">
+                        <label for="gpt-name">Nama Asisten AI</label>
+                        <input type="text" id="gpt-name" placeholder="Contoh: Pakar Koding Laravel & JS">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group quarter">
+                            <label for="gpt-icon">Icon / Emoji</label>
+                            <input type="text" id="gpt-icon" placeholder="💻" maxlength="4">
+                        </div>
+                        <div class="form-group three-quarters">
+                            <label for="gpt-desc">Deskripsi Singkat</label>
+                            <input type="text" id="gpt-desc" placeholder="Membantu membuat & merapikan kode program">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gpt-system-prompt">System Instructions (Instruksi Karakter / Role)</label>
+                        <textarea id="gpt-system-prompt" rows="5" placeholder="Berperanlah sebagai Senior Full Stack Developer. Selalu berikan contoh kode lengkap dengan penjelasan baris per baris..."></textarea>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label><input type="checkbox" id="gpt-pinned" checked> Sematkan di Sidebar (Disematkan)</label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="btn-delete-gpt" class="danger-btn hidden"><i class="fa-solid fa-trash"></i> Hapus</button>
+                        <button id="btn-save-gpt" class="primary-btn"><i class="fa-solid fa-check"></i> Simpan Persona</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Profile & Backup Data Settings -->
+    <div class="modal-overlay hidden" id="modal-user-settings">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-user-gear title-icon"></i>
+                    <span>Setelan Akun & Manajemen Data</span>
+                </div>
+                <button class="modal-close-btn" data-close-modal="modal-user-settings"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="user-display-name">Nama Pengguna</label>
+                    <div class="input-with-icon" style="gap: 8px;">
+                        <input type="text" id="user-display-name" value="Danz" style="flex: 1;">
+                        <button id="btn-save-user-name" class="primary-btn" style="white-space: nowrap;"><i class="fa-solid fa-check"></i> Simpan Nama</button>
+                    </div>
+                </div>
+                <hr class="modal-divider">
+                <h4>Cadangkan & Pemulihan Obrolan</h4>
+                <p class="modal-subtext">Semua riwayat chat dan konfigurasi tersimpan secara lokal di browser Anda.</p>
+                <div class="backup-buttons-row">
+                    <button id="btn-export-data" class="secondary-btn"><i class="fa-solid fa-download"></i> Ekspor Data Chat (JSON)</button>
+                    <label for="import-file-input" class="secondary-btn label-btn"><i class="fa-solid fa-upload"></i> Impor Data (JSON)</label>
+                    <input type="file" id="import-file-input" class="hidden" accept=".json">
+                </div>
+                <hr class="modal-divider">
+                <div class="danger-zone">
+                    <button id="btn-clear-all-data" class="danger-btn"><i class="fa-solid fa-triangle-exclamation"></i> Hapus Seluruh Data Chat & Key</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- External Scripts: MarkedJS (Markdown), HighlightJS (Code Highlight) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Highlight.js Languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+
+    <!-- Custom Modules -->
+    <script src="markdown.js"></script>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
