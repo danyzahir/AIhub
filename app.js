@@ -11,6 +11,7 @@ const App = {
     userIsScrollingUp: false,
     activeController: null,
     userName: 'Users',
+    currentAttachments: [],
 
     init() {
         this.loadState();
@@ -162,7 +163,7 @@ const App = {
                 chatInput.style.height = 'auto';
                 chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
                 
-                if (chatInput.value.trim().length > 0 && !this.isStreaming) {
+                if ((chatInput.value.trim().length > 0 || this.currentAttachments.length > 0) && !this.isStreaming) {
                     sendBtn.classList.remove('disabled');
                 } else if (!this.isStreaming) {
                     sendBtn.classList.add('disabled');
@@ -235,20 +236,19 @@ const App = {
             }
         }
 
-        // Attachment File Button Simulation
+        // Attachment File Button & Drag and Drop Handling
         const attachBtn = document.getElementById('btn-attach');
         const fileInput = document.getElementById('file-input');
         attachBtn?.addEventListener('click', () => fileInput?.click());
         fileInput?.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const previewBar = document.getElementById('file-preview-bar');
-                if (previewBar) {
-                    previewBar.innerHTML = `<i class="fa-solid fa-paperclip"></i> <span>${file.name} (${Math.round(file.size / 1024)} KB)</span> <button onclick="App.clearAttachment()"><i class="fa-solid fa-xmark"></i></button>`;
-                    previewBar.classList.remove('hidden');
-                }
+            if (e.target.files && e.target.files.length > 0) {
+                this.handleFiles(e.target.files);
             }
         });
+
+        this.setupDragAndDrop();
+        this.setupClipboardPaste();
+        this.setupLightbox();
 
         // Thinking Mode Toggle Button
         const thinkingBtn = document.getElementById('btn-toggle-thinking');
@@ -679,13 +679,13 @@ const App = {
         messagesList.innerHTML = '';
 
         chat.messages.forEach((msg, idx) => {
-            this.appendMessageToDOM(msg.role, msg.content, msg.thinking, false, idx);
+            this.appendMessageToDOM(msg.role, msg.content, msg.thinking, false, idx, msg.attachments || null);
         });
 
         this.scrollToBottom();
     },
 
-    appendMessageToDOM(role, content, thinking = '', isStreaming = false, msgIndex = null) {
+    appendMessageToDOM(role, content, thinking = '', isStreaming = false, msgIndex = null, attachments = null) {
         const messagesList = document.getElementById('messages-list');
         if (!messagesList) return null;
 
@@ -709,15 +709,42 @@ const App = {
             body.appendChild(thinkingBox);
         }
 
+        if (role === 'user' && attachments && attachments.length > 0) {
+            const gallery = document.createElement('div');
+            gallery.className = 'message-image-gallery';
+
+            attachments.forEach(att => {
+                if (att.isImage && att.dataUrl) {
+                    const img = document.createElement('img');
+                    img.className = 'message-image-thumb';
+                    img.src = att.dataUrl;
+                    img.alt = att.name || 'Foto Lampiran';
+                    img.title = `${att.name || 'Foto'} (Klik untuk memperbesar)`;
+                    img.onclick = () => App.openLightbox(att.dataUrl, att.name || '');
+                    gallery.appendChild(img);
+                } else if (att.name) {
+                    const chip = document.createElement('div');
+                    chip.className = 'message-file-chip';
+                    chip.innerHTML = `<i class="fa-solid fa-file-lines"></i> <span>${this.escapeHtml(att.name)}</span>`;
+                    gallery.appendChild(chip);
+                }
+            });
+
+            body.appendChild(gallery);
+        }
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
 
         if (role === 'user') {
-            contentDiv.textContent = content;
+            if (content) {
+                contentDiv.textContent = content;
+                body.appendChild(contentDiv);
+            }
         } else {
             contentDiv.innerHTML = MarkdownRenderer.render(content);
+            body.appendChild(contentDiv);
         }
-        body.appendChild(contentDiv);
 
         // Action buttons
         if (role === 'assistant' && !isStreaming) {
@@ -743,7 +770,10 @@ const App = {
         if (!input) return;
 
         const userText = input.value.trim();
-        if (!userText || this.isStreaming) return;
+        const hasAttachments = this.currentAttachments.length > 0;
+        if ((!userText && !hasAttachments) || this.isStreaming) return;
+
+        const attachmentsToSend = [...this.currentAttachments];
 
         // Auto-generate title for new chat
         let chat = this.getActiveChat();
@@ -752,17 +782,23 @@ const App = {
             chat = this.getActiveChat();
         }
 
+        const displayTitle = userText || (attachmentsToSend[0] ? `[Foto] ${attachmentsToSend[0].name}` : 'Obrolan');
         if (chat && chat.messages.length === 0) {
-            chat.title = userText.length > 28 ? userText.substring(0, 28) + '...' : userText;
+            chat.title = displayTitle.length > 28 ? displayTitle.substring(0, 28) + '...' : displayTitle;
             this.saveChats();
             this.renderSidebar();
         }
 
-        // Add user message to state
-        chat.messages.push({ role: 'user', content: userText });
+        // Add user message to state with attachments
+        const userMessage = { role: 'user', content: userText };
+        if (attachmentsToSend.length > 0) {
+            userMessage.attachments = attachmentsToSend;
+        }
+
+        chat.messages.push(userMessage);
         this.saveChats();
 
-        // Clear input field
+        // Clear input field & attachments
         input.value = '';
         input.style.height = 'auto';
         this.clearAttachment();
@@ -770,7 +806,7 @@ const App = {
         // Hide welcome screen and render user message
         document.getElementById('welcome-screen')?.classList.add('hidden');
         document.getElementById('messages-list')?.classList.remove('hidden');
-        this.appendMessageToDOM('user', userText);
+        this.appendMessageToDOM('user', userText, '', false, null, attachmentsToSend);
         this.userIsScrollingUp = false;
         this.scrollToBottom(true);
 
@@ -900,7 +936,235 @@ const App = {
         }
     },
 
+    setupDragAndDrop() {
+        const overlay = document.getElementById('drag-drop-overlay');
+        let dragCounter = 0;
+
+        // Prevent default browser opening of files on drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, (e) => {
+                e.preventDefault();
+            }, false);
+        });
+
+        document.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dragCounter++;
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (overlay && overlay.classList.contains('hidden')) {
+                overlay.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                if (overlay) overlay.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragCounter = 0;
+            if (overlay) overlay.classList.add('hidden');
+
+            const dt = e.dataTransfer;
+            if (!dt) return;
+
+            let files = [];
+            if (dt.files && dt.files.length > 0) {
+                files = Array.from(dt.files);
+            } else if (dt.items && dt.items.length > 0) {
+                for (let i = 0; i < dt.items.length; i++) {
+                    const item = dt.items[i];
+                    if (item.kind === 'file') {
+                        const file = item.getAsFile();
+                        if (file) files.push(file);
+                    }
+                }
+            }
+
+            if (files.length > 0) {
+                this.handleFiles(files);
+            }
+        });
+    },
+
+    setupClipboardPaste() {
+        const chatInput = document.getElementById('chat-input');
+        chatInput?.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            const files = [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file') {
+                    const file = items[i].getAsFile();
+                    if (file) files.push(file);
+                }
+            }
+            if (files.length > 0) {
+                this.handleFiles(files);
+            }
+        });
+    },
+
+    setupLightbox() {
+        const lightbox = document.getElementById('image-lightbox');
+        const closeBtn = document.getElementById('btn-close-lightbox');
+        closeBtn?.addEventListener('click', () => lightbox?.classList.add('hidden'));
+        lightbox?.addEventListener('click', (e) => {
+            if (e.target === lightbox) lightbox.classList.add('hidden');
+        });
+    },
+
+    openLightbox(src, caption = '') {
+        const lightbox = document.getElementById('image-lightbox');
+        const img = document.getElementById('lightbox-img');
+        const cap = document.getElementById('lightbox-caption');
+        if (lightbox && img) {
+            img.src = src;
+            if (cap) cap.textContent = caption;
+            lightbox.classList.remove('hidden');
+        }
+    },
+
+    async handleFiles(filesList) {
+        const files = Array.from(filesList);
+        if (files.length === 0) return;
+
+        let addedCount = 0;
+        for (const file of files) {
+            const fileName = file.name || 'foto.png';
+            const isImage = (file.type && file.type.startsWith('image/')) || 
+                            /\.(jpg|jpeg|png|webp|gif|bmp|svg|ico)$/i.test(fileName);
+            
+            const attachment = {
+                id: 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+                name: fileName,
+                size: file.size || 0,
+                type: file.type || 'image/png',
+                isImage: isImage
+            };
+
+            if (isImage) {
+                try {
+                    attachment.dataUrl = await this.readFileAsDataURL(file);
+                    this.currentAttachments.push(attachment);
+                    addedCount++;
+                } catch (err) {
+                    console.error('Error reading image file:', err);
+                }
+            } else {
+                try {
+                    attachment.textContent = await this.readFileAsText(file);
+                } catch (err) {
+                    attachment.textContent = `[File: ${fileName}]`;
+                }
+                this.currentAttachments.push(attachment);
+                addedCount++;
+            }
+        }
+
+        if (addedCount > 0) {
+            this.renderAttachmentPreviews();
+            const sendBtn = document.getElementById('btn-send');
+            if (sendBtn && !this.isStreaming) {
+                sendBtn.classList.remove('disabled');
+            }
+        }
+    },
+
+    readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    },
+
+    readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    },
+
+    renderAttachmentPreviews() {
+        const previewBar = document.getElementById('file-preview-bar');
+        if (!previewBar) return;
+
+        if (this.currentAttachments.length === 0) {
+            previewBar.innerHTML = '';
+            previewBar.classList.add('hidden');
+            return;
+        }
+
+        previewBar.classList.remove('hidden');
+        previewBar.innerHTML = '';
+
+        this.currentAttachments.forEach((att) => {
+            const pill = document.createElement('div');
+            pill.className = 'attachment-pill';
+
+            const formattedSize = att.size > 1024 * 1024 
+                ? (att.size / (1024 * 1024)).toFixed(1) + ' MB'
+                : Math.round(att.size / 1024) + ' KB';
+
+            if (att.isImage && att.dataUrl) {
+                pill.innerHTML = `
+                    <img src="${att.dataUrl}" class="attachment-thumb" alt="${this.escapeHtml(att.name)}">
+                    <div class="attachment-meta">
+                        <span class="attachment-name">${this.escapeHtml(att.name)}</span>
+                        <span class="attachment-size">${formattedSize}</span>
+                    </div>
+                    <button class="btn-remove-attachment" title="Hapus foto" onclick="App.removeAttachment('${att.id}')">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+            } else {
+                pill.innerHTML = `
+                    <div class="attachment-icon-box"><i class="fa-solid fa-file-code"></i></div>
+                    <div class="attachment-meta">
+                        <span class="attachment-name">${this.escapeHtml(att.name)}</span>
+                        <span class="attachment-size">${formattedSize}</span>
+                    </div>
+                    <button class="btn-remove-attachment" title="Hapus file" onclick="App.removeAttachment('${att.id}')">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+            }
+
+            previewBar.appendChild(pill);
+        });
+    },
+
+    removeAttachment(id) {
+        this.currentAttachments = this.currentAttachments.filter(a => a.id !== id);
+        this.renderAttachmentPreviews();
+
+        const input = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('btn-send');
+        if (sendBtn && !this.isStreaming) {
+            if (!input?.value.trim() && this.currentAttachments.length === 0) {
+                sendBtn.classList.add('disabled');
+            }
+        }
+    },
+
     clearAttachment() {
+        this.currentAttachments = [];
         const fileInput = document.getElementById('file-input');
         const previewBar = document.getElementById('file-preview-bar');
         if (fileInput) fileInput.value = '';

@@ -224,11 +224,14 @@
                 </button>
 
                 <div class="input-capsule-wrapper">
+                    <div class="file-preview-bar hidden" id="file-preview-bar">
+                        <!-- Attached file pill display -->
+                    </div>
                     <div class="input-capsule">
                         <button id="btn-attach" class="capsule-btn attach-btn" title="Lampirkan file / gambar">
                             <i class="fa-solid fa-plus"></i>
                         </button>
-                        <input type="file" id="file-input" class="hidden" accept="image/*,text/*,.pdf,.json,.js,.css,.html,.php">
+                        <input type="file" id="file-input" class="hidden" accept="image/*,text/*,.pdf,.json,.js,.css,.html,.php,.py,.csv" multiple>
                         
                         <textarea id="chat-input" placeholder="Tanyakan apa saja..." rows="1"></textarea>
 
@@ -241,9 +244,6 @@
                                 <i class="fa-solid fa-arrow-up"></i>
                             </button>
                         </div>
-                    </div>
-                    <div class="file-preview-bar hidden" id="file-preview-bar">
-                        <!-- Attached file pill display -->
                     </div>
                 </div>
                 <p class="disclaimer-text">
@@ -457,6 +457,24 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Drag & Drop Overlay Zone -->
+    <div id="drag-drop-overlay" class="drag-drop-overlay hidden">
+        <div class="drag-drop-card">
+            <div class="drag-drop-icon-wrapper">
+                <i class="fa-solid fa-cloud-arrow-up drag-drop-icon"></i>
+            </div>
+            <h3 class="drag-drop-title">Lepaskan foto atau file di sini</h3>
+            <p class="drag-drop-subtitle">File foto akan otomatis dilampirkan ke prompt pesan Anda</p>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div id="image-lightbox" class="image-lightbox hidden">
+        <button id="btn-close-lightbox" class="lightbox-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        <img id="lightbox-img" src="" alt="Full view preview">
+        <div id="lightbox-caption" class="lightbox-caption"></div>
     </div>
 
     <!-- Toast Notification Container -->

@@ -173,7 +173,28 @@ const AIClient = {
             formattedMessages.push({ role: 'system', content: systemPrompt });
         }
         messages.forEach(m => {
-            formattedMessages.push({ role: m.role, content: m.content });
+            if (m.attachments && m.attachments.length > 0) {
+                const parts = [];
+                if (m.content) {
+                    parts.push({ type: 'text', text: m.content });
+                }
+                m.attachments.forEach(att => {
+                    if (att.isImage && att.dataUrl) {
+                        parts.push({
+                            type: 'image_url',
+                            image_url: { url: att.dataUrl }
+                        });
+                    } else if (att.textContent) {
+                        parts.push({
+                            type: 'text',
+                            text: `[Lampiran File "${att.name}"]:\n${att.textContent}`
+                        });
+                    }
+                });
+                formattedMessages.push({ role: m.role, content: parts });
+            } else {
+                formattedMessages.push({ role: m.role, content: m.content || '' });
+            }
         });
 
         const body = {
@@ -281,10 +302,32 @@ const AIClient = {
 
         const contents = [];
         messages.forEach(m => {
-            contents.push({
-                role: m.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: m.content }]
-            });
+            const role = m.role === 'assistant' ? 'model' : 'user';
+            const parts = [];
+            if (m.content) {
+                parts.push({ text: m.content });
+            }
+            if (m.attachments && m.attachments.length > 0) {
+                m.attachments.forEach(att => {
+                    if (att.isImage && att.dataUrl) {
+                        const match = att.dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+                        if (match) {
+                            parts.push({
+                                inlineData: {
+                                    mimeType: match[1],
+                                    data: match[2]
+                                }
+                            });
+                        }
+                    } else if (att.textContent) {
+                        parts.push({
+                            text: `[Lampiran File "${att.name}"]:\n${att.textContent}`
+                        });
+                    }
+                });
+            }
+            if (parts.length === 0) parts.push({ text: '' });
+            contents.push({ role, parts });
         });
 
         const body = {
@@ -360,14 +403,18 @@ const AIClient = {
      * Interactive Demo Fallback Mode
      */
     async runDemoStream({ messages, onChunk, onThinking, onComplete, signal }) {
-        const lastUserMsg = messages[messages.length - 1]?.content || '';
+        const lastMsgObj = messages[messages.length - 1];
+        const lastUserMsg = lastMsgObj?.content || '';
+        const attachmentInfo = lastMsgObj?.attachments && lastMsgObj.attachments.length > 0
+            ? `\n\n📷 **Terdeteksi ${lastMsgObj.attachments.length} foto/lampiran file yang siap diproses oleh model vision!**`
+            : '';
         
         if (this.config.enableThinking && onThinking) {
-            onThinking('Menganalisis pesan...');
+            onThinking('Menganalisis pesan dan foto lampiran...');
             await new Promise(r => setTimeout(r, 600));
         }
 
-        const responseText = `Halo! **AI Hub** siap membantu Anda. 🚀
+        const responseText = `Halo! **AI Hub** siap membantu Anda. 🚀${attachmentInfo}
 
 Saya mendeteksi bahwa **API Key (${this.config.provider.toUpperCase()}) belum dikonfigurasi** di browser Anda.
 
@@ -382,7 +429,7 @@ Saya mendeteksi bahwa **API Key (${this.config.provider.toUpperCase()}) belum di
 ---
 
 *Pesan Anda sebelumnya:*
-> "${lastUserMsg}"`;
+> "${lastUserMsg || '(Hanya lampiran foto/file)'}"`;
 
         const words = responseText.split(' ');
         let currentText = '';
