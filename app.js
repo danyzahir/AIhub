@@ -1080,9 +1080,6 @@ const App = {
             if (sendBtn && !this.isStreaming) {
                 sendBtn.classList.remove('disabled');
             }
-            if (AIClient.config.provider === 'deepseek' && this.currentAttachments.some(a => a.isImage)) {
-                this.showToast('Petunjuk: DeepSeek berfokus pada teks & koding. Pilih model GPT-4o atau Gemini 2.0 Flash untuk analisa visual gambar.', 'info');
-            }
         }
     },
 
