@@ -10,7 +10,7 @@ const App = {
     isStreaming: false,
     userIsScrollingUp: false,
     activeController: null,
-    userName: 'Danz',
+    userName: 'Users',
 
     init() {
         this.loadState();
