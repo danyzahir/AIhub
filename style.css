@@ -868,7 +868,7 @@ button {
 
 /* Blockquotes */
 .message-content blockquote {
-    border-left: 3px solid var(--accent-blue);
+    border-left: 3px solid var(--border-light);
     background-color: rgba(255, 255, 255, 0.03);
     padding: 10px 16px;
     margin: 14px 0;
@@ -888,7 +888,7 @@ button {
 
 .thinking-box {
     background-color: rgba(255, 255, 255, 0.03);
-    border-left: 3px solid var(--accent-blue);
+    border-left: 3px solid var(--border-light);
     padding: 10px 14px;
     border-radius: 4px;
     font-size: 13px;
@@ -1442,25 +1442,16 @@ p inline-code, code:not(pre code) {
 
 .toast {
     background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-left: 4px solid var(--accent-blue);
+    border: 1px solid var(--border-light);
     color: var(--text-primary);
     padding: 12px 18px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
     font-size: 13px;
     display: flex;
     align-items: center;
     gap: 10px;
     animation: slideIn 0.3s ease;
-}
-
-.toast.success {
-    border-left-color: var(--accent-blue);
-}
-
-.toast.error {
-    border-left-color: var(--danger-red);
 }
 
 @keyframes slideIn {
