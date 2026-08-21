@@ -95,6 +95,24 @@ const AIClient = {
         return '';
     },
 
+    isVisionModel(provider, modelName) {
+        if (provider === 'openai') {
+            const m = (modelName || '').toLowerCase();
+            return m.includes('gpt-4o') || m.includes('vision') || m.includes('gpt-4-turbo');
+        }
+        if (provider === 'gemini') {
+            return true;
+        }
+        if (provider === 'openrouter') {
+            const m = (modelName || '').toLowerCase();
+            return m.includes('gpt-4o') || m.includes('claude-3') || m.includes('gemini') || m.includes('vision') || m.includes('pixtral') || m.includes('llava');
+        }
+        if (provider === 'deepseek') {
+            return false;
+        }
+        return false;
+    },
+
     /**
      * Core Streaming Method
      */
@@ -167,6 +185,8 @@ const AIClient = {
             modelName = 'gpt-4o';
         }
 
+        const supportsVision = this.isVisionModel(provider, modelName);
+
         // Format message history
         const formattedMessages = [];
         if (systemPrompt) {
@@ -174,24 +194,36 @@ const AIClient = {
         }
         messages.forEach(m => {
             if (m.attachments && m.attachments.length > 0) {
-                const parts = [];
-                if (m.content) {
-                    parts.push({ type: 'text', text: m.content });
-                }
-                m.attachments.forEach(att => {
-                    if (att.isImage && att.dataUrl) {
-                        parts.push({
-                            type: 'image_url',
-                            image_url: { url: att.dataUrl }
-                        });
-                    } else if (att.textContent) {
-                        parts.push({
-                            type: 'text',
-                            text: `[Lampiran File "${att.name}"]:\n${att.textContent}`
-                        });
+                if (supportsVision) {
+                    const parts = [];
+                    if (m.content) {
+                        parts.push({ type: 'text', text: m.content });
                     }
-                });
-                formattedMessages.push({ role: m.role, content: parts });
+                    m.attachments.forEach(att => {
+                        if (att.isImage && att.dataUrl) {
+                            parts.push({
+                                type: 'image_url',
+                                image_url: { url: att.dataUrl }
+                            });
+                        } else if (att.textContent) {
+                            parts.push({
+                                type: 'text',
+                                text: `[Lampiran File "${att.name}"]:\n${att.textContent}`
+                            });
+                        }
+                    });
+                    formattedMessages.push({ role: m.role, content: parts });
+                } else {
+                    let textContent = m.content || '';
+                    m.attachments.forEach(att => {
+                        if (att.isImage) {
+                            textContent += `\n\n[Lampiran Foto: "${att.name}"]`;
+                        } else if (att.textContent) {
+                            textContent += `\n\n[Lampiran File "${att.name}"]:\n${att.textContent}`;
+                        }
+                    });
+                    formattedMessages.push({ role: m.role, content: textContent.trim() });
+                }
             } else {
                 formattedMessages.push({ role: m.role, content: m.content || '' });
             }
