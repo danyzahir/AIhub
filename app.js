@@ -172,11 +172,24 @@ const App = {
 
             chatInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    this.handleSendMessage();
+                    if (this.isStreaming) {
+                        e.preventDefault();
+                        return;
+                    }
+                    if (chatInput.value.trim().length > 0 || this.currentAttachments.length > 0) {
+                        e.preventDefault();
+                        this.handleSendMessage();
+                    }
                 }
             });
         }
+
+        // Tap on input capsule container to focus textarea on mobile
+        document.querySelector('.input-capsule')?.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'I' && !e.target.closest('button') && e.target !== chatInput) {
+                chatInput?.focus();
+            }
+        });
 
         // Send & Stop Button Click
         sendBtn?.addEventListener('click', () => {
@@ -377,11 +390,8 @@ const App = {
                 systemPrompt
             });
 
-            // Update top bar title label live
-            const currentModelName = document.getElementById('current-model-name');
-            if (currentModelName) {
-                currentModelName.textContent = `${AIClient.config.model} (${AIClient.config.provider.toUpperCase()})`;
-            }
+            // Update top bar title label & dropdown selection live
+            this.updateModelSelectorUI();
 
             this.closeModal('modal-api-settings');
             this.showToast('Setelan API berhasil disimpan!', 'success');
@@ -940,6 +950,12 @@ const App = {
         const overlay = document.getElementById('drag-drop-overlay');
         let dragCounter = 0;
 
+        const isFileDrag = (e) => {
+            if (!e.dataTransfer) return false;
+            const types = Array.from(e.dataTransfer.types || []);
+            return types.includes('Files');
+        };
+
         // Prevent default browser opening of files on drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             document.addEventListener(eventName, (e) => {
@@ -949,6 +965,7 @@ const App = {
 
         document.addEventListener('dragenter', (e) => {
             e.preventDefault();
+            if (!isFileDrag(e)) return;
             dragCounter++;
             if (overlay) {
                 overlay.classList.remove('hidden');
@@ -957,6 +974,7 @@ const App = {
 
         document.addEventListener('dragover', (e) => {
             e.preventDefault();
+            if (!isFileDrag(e)) return;
             if (overlay && overlay.classList.contains('hidden')) {
                 overlay.classList.remove('hidden');
             }
@@ -1226,6 +1244,31 @@ const App = {
         document.querySelectorAll('.tab-content').forEach(c => {
             c.classList.toggle('active', c.id === tabName);
         });
+
+        this.updateModelSelectorUI();
+    },
+
+    updateModelSelectorUI() {
+        const cfg = AIClient.config;
+        const modelNameEl = document.getElementById('current-model-name');
+        let matchedOption = null;
+
+        document.querySelectorAll('.model-option').forEach(opt => {
+            const p = opt.getAttribute('data-provider');
+            const m = opt.getAttribute('data-model');
+            const isMatch = (p === cfg.provider && m === cfg.model);
+            opt.classList.toggle('active', isMatch);
+            if (isMatch) matchedOption = opt;
+        });
+
+        if (modelNameEl) {
+            if (matchedOption) {
+                const title = matchedOption.querySelector('.model-title')?.textContent || cfg.model;
+                modelNameEl.textContent = `${title} (${cfg.provider.toUpperCase()})`;
+            } else {
+                modelNameEl.textContent = `${cfg.model} (${cfg.provider.toUpperCase()})`;
+            }
+        }
     },
 
     renderCustomGptModalList() {

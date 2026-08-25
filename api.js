@@ -29,6 +29,9 @@ const AIClient = {
         if (saved) {
             try {
                 this.config = { ...this.config, ...JSON.parse(saved) };
+                if (this.config.model === 'gemini-2.0-flash') {
+                    this.config.model = 'gemini-3.6-flash';
+                }
             } catch (e) {
                 console.error('Failed to parse stored API config:', e);
             }
@@ -51,8 +54,8 @@ const AIClient = {
         if (this.config.provider === 'openai' && (!this.config.model || !this.config.model.startsWith('gpt'))) {
             this.config.model = 'gpt-4o';
         }
-        if (this.config.provider === 'gemini' && (!this.config.model || !this.config.model.startsWith('gemini'))) {
-            this.config.model = 'gemini-2.0-flash';
+        if (this.config.provider === 'gemini' && (!this.config.model || !this.config.model.startsWith('gemini') || this.config.model === 'gemini-2.0-flash')) {
+            this.config.model = 'gemini-3.6-flash';
         }
 
         localStorage.setItem('chatgpt_go_api_config', JSON.stringify(this.config));
@@ -84,7 +87,9 @@ const AIClient = {
         }
         if (this.config.geminiKey) { 
             this.config.provider = 'gemini';
-            this.config.model = 'gemini-2.0-flash';
+            if (!this.config.model || !this.config.model.startsWith('gemini') || this.config.model === 'gemini-2.0-flash') {
+                this.config.model = 'gemini-3.6-flash';
+            }
             return this.config.geminiKey; 
         }
         if (this.config.openrouterKey) { 
@@ -329,7 +334,8 @@ const AIClient = {
      * Google Gemini REST API Stream
      */
     async streamGemini({ messages, systemPrompt, apiKey, onChunk, onThinking, onComplete, onError, signal }) {
-        const model = this.config.model || 'gemini-2.0-flash';
+        const rawModel = this.config.model || 'gemini-3.6-flash';
+        const model = (!rawModel || rawModel === 'gemini-2.0-flash') ? 'gemini-3.6-flash' : rawModel;
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
 
         const contents = [];

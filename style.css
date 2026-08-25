@@ -1013,6 +1013,8 @@ p inline-code, code:not(pre code) {
     gap: 10px;
     box-shadow: var(--shadow-md);
     transition: border-color 0.2s, background 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .input-capsule:focus-within {
@@ -1056,6 +1058,8 @@ p inline-code, code:not(pre code) {
 
 #chat-input {
     flex: 1;
+    min-width: 0;
+    width: 100%;
     background: transparent;
     border: none;
     outline: none;
@@ -1074,6 +1078,7 @@ p inline-code, code:not(pre code) {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
 }
 
 .thinking-tag {
@@ -1521,8 +1526,23 @@ p inline-code, code:not(pre code) {
         display: none;
     }
 
+    .pill-toggle-btn {
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+
     .input-area {
-        padding: 10px 12px 14px 12px;
+        padding: 8px 10px 12px 10px;
+    }
+
+    .input-capsule {
+        padding: 8px 10px;
+        gap: 6px;
+    }
+
+    #chat-input {
+        font-size: 16px; /* Prevents auto-zoom on iOS/Android Safari & Chrome */
+        padding: 4px 0;
     }
 
     .welcome-heading {
@@ -1552,6 +1572,12 @@ p inline-code, code:not(pre code) {
         width: 94%;
         max-height: 90vh;
         padding: 16px;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .drag-drop-overlay {
+        display: none !important;
     }
 }
 
