@@ -164,6 +164,30 @@
                                     <span class="model-desc">Google AI balasan cepat</span>
                                 </div>
                             </button>
+
+                            <div class="dropdown-header">Model Claude Anthropic</div>
+                            <button class="model-option" data-provider="claude" data-model="claude-3-5-sonnet-20241022">
+                                <i class="fa-solid fa-robot"></i>
+                                <div class="model-info">
+                                    <span class="model-title">Claude 3.5 Sonnet</span>
+                                    <span class="model-desc">Anthropic flagship model cerdas & terampil</span>
+                                </div>
+                            </button>
+                            <button class="model-option" data-provider="claude" data-model="claude-3-5-haiku-20241022">
+                                <i class="fa-solid fa-bolt"></i>
+                                <div class="model-info">
+                                    <span class="model-title">Claude 3.5 Haiku</span>
+                                    <span class="model-desc">Cepat & hemat biaya</span>
+                                </div>
+                            </button>
+                            <button class="model-option" data-provider="claude" data-model="claude-3-opus-20240229">
+                                <i class="fa-solid fa-star"></i>
+                                <div class="model-info">
+                                    <span class="model-title">Claude 3 Opus</span>
+                                    <span class="model-desc">Model Anthropic paling kuat</span>
+                                </div>
+                            </button>
+
                             <button class="model-option" data-provider="openrouter" data-model="deepseek/deepseek-chat">
                                 <i class="fa-solid fa-globe"></i>
                                 <div class="model-info">
@@ -276,6 +300,7 @@
                     <button class="tab-btn active" data-tab="tab-deepseek"><i class="fa-solid fa-brain"></i> DeepSeek</button>
                     <button class="tab-btn" data-tab="tab-openai"><i class="fa-solid fa-bolt"></i> OpenAI</button>
                     <button class="tab-btn" data-tab="tab-gemini"><i class="fa-solid fa-gem"></i> Google Gemini</button>
+                    <button class="tab-btn" data-tab="tab-claude"><i class="fa-solid fa-robot"></i> Claude</button>
                     <button class="tab-btn" data-tab="tab-openrouter"><i class="fa-solid fa-globe"></i> OpenRouter</button>
                     <button class="tab-btn" data-tab="tab-custom"><i class="fa-solid fa-server"></i> Custom API</button>
                 </div>
@@ -313,6 +338,18 @@
                             <button class="btn-toggle-eye" data-target="gemini-api-key"><i class="fa-solid fa-eye"></i></button>
                         </div>
                         <small class="help-text">Dapatkan API Key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</small>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Claude -->
+                <div class="tab-content" id="tab-claude">
+                    <div class="form-group">
+                        <label for="claude-api-key">Anthropic Claude API Key</label>
+                        <div class="input-with-icon">
+                            <input type="password" id="claude-api-key" placeholder="sk-ant-..." autocomplete="off">
+                            <button class="btn-toggle-eye" data-target="claude-api-key"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <small class="help-text">Dapatkan API Key di <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a>.</small>
                     </div>
                 </div>
 

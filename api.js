@@ -1,15 +1,16 @@
 /* ==========================================
-   AI API Client (DeepSeek, OpenAI, Gemini, OpenRouter & Custom)
+   AI API Client (DeepSeek, OpenAI, Gemini, OpenRouter, Claude & Custom)
    ========================================== */
 
 const AIClient = {
     // Default API Configuration (All keys empty by default for manual entry)
     config: {
-        provider: 'deepseek', // 'deepseek', 'openai', 'gemini', 'openrouter', 'custom'
+        provider: 'deepseek', // 'deepseek', 'openai', 'gemini', 'openrouter', 'claude', 'custom'
         openaiKey: '',
         deepseekKey: '',
         geminiKey: '',
         openrouterKey: '',
+        claudeKey: '',
         customBaseUrl: 'http://localhost:11434/v1',
         customModelId: 'llama3:latest',
         customApiKey: '',
@@ -43,6 +44,7 @@ const AIClient = {
         if (newConfig.deepseekKey !== undefined) newConfig.deepseekKey = newConfig.deepseekKey.trim();
         if (newConfig.geminiKey !== undefined) newConfig.geminiKey = newConfig.geminiKey.trim();
         if (newConfig.openrouterKey !== undefined) newConfig.openrouterKey = newConfig.openrouterKey.trim();
+        if (newConfig.claudeKey !== undefined) newConfig.claudeKey = newConfig.claudeKey.trim();
         if (newConfig.customApiKey !== undefined) newConfig.customApiKey = newConfig.customApiKey.trim();
 
         this.config = { ...this.config, ...newConfig };
@@ -56,6 +58,9 @@ const AIClient = {
         }
         if (this.config.provider === 'gemini' && (!this.config.model || !this.config.model.startsWith('gemini') || this.config.model === 'gemini-2.0-flash')) {
             this.config.model = 'gemini-3.6-flash';
+        }
+        if (this.config.provider === 'claude' && (!this.config.model || !this.config.model.startsWith('claude'))) {
+            this.config.model = 'claude-3-5-sonnet-20241022';
         }
 
         localStorage.setItem('chatgpt_go_api_config', JSON.stringify(this.config));
@@ -72,6 +77,7 @@ const AIClient = {
         if (p === 'openai' && this.config.openaiKey) return this.config.openaiKey;
         if (p === 'gemini' && this.config.geminiKey) return this.config.geminiKey;
         if (p === 'openrouter' && this.config.openrouterKey) return this.config.openrouterKey;
+        if (p === 'claude' && this.config.claudeKey) return this.config.claudeKey;
         if (p === 'custom' && (this.config.customApiKey || this.config.customBaseUrl)) return this.config.customApiKey || 'no-key-required';
 
         // 2. Intelligent Fallback: Check which API Key is available in config
@@ -96,6 +102,13 @@ const AIClient = {
             this.config.provider = 'openrouter';
             return this.config.openrouterKey; 
         }
+        if (this.config.claudeKey) { 
+            this.config.provider = 'claude';
+            if (!this.config.model || !this.config.model.startsWith('claude')) {
+                this.config.model = 'claude-3-5-sonnet-20241022';
+            }
+            return this.config.claudeKey; 
+        }
 
         return '';
     },
@@ -111,6 +124,10 @@ const AIClient = {
         if (provider === 'openrouter') {
             const m = (modelName || '').toLowerCase();
             return m.includes('gpt-4o') || m.includes('claude-3') || m.includes('gemini') || m.includes('vision') || m.includes('pixtral') || m.includes('llava');
+        }
+        if (provider === 'claude') {
+            const m = (modelName || '').toLowerCase();
+            return m.includes('claude-3');
         }
         if (provider === 'deepseek') {
             return false;
@@ -132,7 +149,7 @@ const AIClient = {
         const effectiveSystemPrompt = activePersonaPrompt || this.config.systemPrompt;
 
         // If no API Key is provided anywhere, use interactive Demo Stream
-        if (!apiKey && (provider === 'openai' || provider === 'deepseek' || provider === 'gemini' || provider === 'openrouter')) {
+        if (!apiKey && (provider === 'openai' || provider === 'deepseek' || provider === 'gemini' || provider === 'openrouter' || provider === 'claude')) {
             this.runDemoStream({ messages, onChunk, onThinking, onComplete, signal });
             return controller;
         }
@@ -140,6 +157,8 @@ const AIClient = {
         try {
             if (provider === 'gemini') {
                 await this.streamGemini({ messages, systemPrompt: effectiveSystemPrompt, apiKey, onChunk, onThinking, onComplete, onError, signal });
+            } else if (provider === 'claude') {
+                await this.streamClaude({ messages, systemPrompt: effectiveSystemPrompt, apiKey, onChunk, onThinking, onComplete, onError, signal });
             } else {
                 await this.streamOpenAICompatible({ messages, systemPrompt: effectiveSystemPrompt, provider, apiKey, onChunk, onThinking, onComplete, onError, signal });
             }
@@ -438,6 +457,137 @@ const AIClient = {
     },
 
     /**
+     * Anthropic Claude API Stream
+     */
+    async streamClaude({ messages, systemPrompt, apiKey, onChunk, onThinking, onComplete, onError, signal }) {
+        const rawModel = this.config.model || 'claude-3-5-sonnet-20241022';
+        const model = (!rawModel || !rawModel.startsWith('claude')) ? 'claude-3-5-sonnet-20241022' : rawModel;
+        const endpoint = 'https://api.anthropic.com/v1/messages';
+
+        // Format message history for Claude API
+        const formattedMessages = [];
+        messages.forEach(m => {
+            const role = m.role === 'assistant' ? 'assistant' : 'user';
+            const content = [];
+
+            if (m.content) {
+                content.push({ type: 'text', text: m.content });
+            }
+
+            if (m.attachments && m.attachments.length > 0) {
+                m.attachments.forEach(att => {
+                    if (att.isImage && att.dataUrl) {
+                        const match = att.dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+                        if (match) {
+                            content.push({
+                                type: 'image',
+                                source: {
+                                    type: 'base64',
+                                    media_type: match[1],
+                                    data: match[2]
+                                }
+                            });
+                        }
+                    } else if (att.textContent) {
+                        content.push({
+                            type: 'text',
+                            text: `[Lampiran File "${att.name}"]:\n${att.textContent}`
+                        });
+                    }
+                });
+            }
+
+            if (content.length === 0) content.push({ type: 'text', text: '' });
+            formattedMessages.push({ role, content });
+        });
+
+        const body = {
+            model: model,
+            max_tokens: parseInt(this.config.maxTokens) || 4096,
+            messages: formattedMessages,
+            stream: true
+        };
+
+        if (systemPrompt) {
+            body.system = systemPrompt;
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        };
+
+        let response;
+        try {
+            response = await fetch(endpoint, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(body),
+                signal: signal
+            });
+        } catch (fetchErr) {
+            throw new Error(`Koneksi Gagal: Tidak dapat menghubungi server Anthropic Claude API.`);
+        }
+
+        if (!response.ok) {
+            const errText = await response.text();
+            let formattedErr = `Claude API Error (${response.status})`;
+            if (response.status === 401) {
+                formattedErr = `[401 Unauthorized] API Key Claude Anda tidak valid. Periksa kembali Key di Setelan API.`;
+            } else if (response.status === 402 || response.status === 429) {
+                formattedErr = `[Quota Error ${response.status}] Saldo API Key habis atau batas pemanggilan (rate limit) tercapai.`;
+            } else {
+                formattedErr = `[Error ${response.status}] ${errText}`;
+            }
+            throw new Error(formattedErr);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let fullText = '';
+        let buffer = '';
+
+        if (this.config.enableThinking && onThinking) {
+            onThinking('Claude sedang berpikir...');
+            await new Promise(r => setTimeout(r, 400));
+        }
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed === 'data: [DONE]') continue;
+                if (trimmed.startsWith('data: ')) {
+                    try {
+                        const parsed = JSON.parse(trimmed.slice(6));
+                        const delta = parsed.delta;
+                        
+                        if (delta && delta.type === 'content_block_delta' && delta.delta && delta.delta.type === 'text_delta') {
+                            const textChunk = delta.delta.text || '';
+                            if (textChunk) {
+                                fullText += textChunk;
+                                if (onChunk) onChunk(textChunk, fullText);
+                            }
+                        }
+                    } catch (e) {
+                        // ignore JSON parse chunk glitches
+                    }
+                }
+            }
+        }
+
+        if (onComplete) onComplete(fullText);
+    },
+
+    /**
      * Interactive Demo Fallback Mode
      */
     async runDemoStream({ messages, onChunk, onThinking, onComplete, signal }) {
@@ -462,6 +612,7 @@ Saya mendeteksi bahwa **API Key (${this.config.provider.toUpperCase()}) belum di
    - **DeepSeek**: Key \`sk-...\` dari [DeepSeek Platform](https://platform.deepseek.com/api_keys).
    - **OpenAI**: Key \`sk-...\` dari [OpenAI Platform](https://platform.openai.com/api-keys).
    - **Google Gemini**: Key gratis dari [Google AI Studio](https://aistudio.google.com/app/apikey).
+   - **Claude**: Key \`sk-ant-...\` dari [Anthropic Console](https://console.anthropic.com/).
 3. Klik tombol **Simpan Setelan**.
 
 ---

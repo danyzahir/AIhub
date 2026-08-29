@@ -362,12 +362,14 @@ const App = {
             let provider = 'deepseek';
             if (activeTab === 'tab-openai') provider = 'openai';
             if (activeTab === 'tab-gemini') provider = 'gemini';
+            if (activeTab === 'tab-claude') provider = 'claude';
             if (activeTab === 'tab-openrouter') provider = 'openrouter';
             if (activeTab === 'tab-custom') provider = 'custom';
 
             const deepseekKey = document.getElementById('deepseek-api-key')?.value.trim();
             const openaiKey = document.getElementById('openai-api-key')?.value.trim();
             const geminiKey = document.getElementById('gemini-api-key')?.value.trim();
+            const claudeKey = document.getElementById('claude-api-key')?.value.trim();
             const openrouterKey = document.getElementById('openrouter-api-key')?.value.trim();
             const customBaseUrl = document.getElementById('custom-base-url')?.value.trim();
             const customModelId = document.getElementById('custom-model-id')?.value.trim();
@@ -381,6 +383,7 @@ const App = {
                 deepseekKey,
                 openaiKey,
                 geminiKey,
+                claudeKey,
                 openrouterKey,
                 customBaseUrl,
                 customModelId,
@@ -1222,6 +1225,7 @@ const App = {
         if (deepseekInput) deepseekInput.value = cfg.deepseekKey || '';
         document.getElementById('openai-api-key').value = cfg.openaiKey || '';
         document.getElementById('gemini-api-key').value = cfg.geminiKey || '';
+        document.getElementById('claude-api-key').value = cfg.claudeKey || '';
         document.getElementById('openrouter-api-key').value = cfg.openrouterKey || '';
         document.getElementById('custom-base-url').value = cfg.customBaseUrl || 'http://localhost:11434/v1';
         document.getElementById('custom-model-id').value = cfg.customModelId || '';
@@ -1235,6 +1239,7 @@ const App = {
         let tabName = 'tab-deepseek';
         if (cfg.provider === 'openai') tabName = 'tab-openai';
         if (cfg.provider === 'gemini') tabName = 'tab-gemini';
+        if (cfg.provider === 'claude') tabName = 'tab-claude';
         if (cfg.provider === 'openrouter') tabName = 'tab-openrouter';
         if (cfg.provider === 'custom') tabName = 'tab-custom';
 
